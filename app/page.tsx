@@ -39,19 +39,6 @@ const logoStyles = [
   { name: "Minimal", icon: "/minimal.svg" },
 ];
 
-const primaryColors = [
-  { name: "Blue", color: "#0F6FFF" },
-  { name: "Red", color: "#FF0000" },
-  { name: "Green", color: "#00FF00" },
-  { name: "Yellow", color: "#FFFF00" },
-];
-
-const backgroundColors = [
-  { name: "White", color: "#FFFFFF" },
-  { name: "Gray", color: "#CCCCCC" },
-  { name: "Black", color: "#000000" },
-];
-
 export default function Page() {
   const [userAPIKey, setUserAPIKey] = useState(() => {
     if (typeof window !== "undefined") {
@@ -62,12 +49,8 @@ export default function Page() {
   const [companyName, setCompanyName] = useState("");
   // const [selectedLayout, setSelectedLayout] = useState(layouts[0].name);
   const [selectedStyle, setSelectedStyle] = useState(logoStyles[0].name);
-  const [selectedPrimaryColor, setSelectedPrimaryColor] = useState(
-    primaryColors[0].name,
-  );
-  const [selectedBackgroundColor, setSelectedBackgroundColor] = useState(
-    backgroundColors[0].name,
-  );
+  const [selectedPrimaryColor, setSelectedPrimaryColor] = useState("#0F6FFF");
+  const [selectedBackgroundColor, setSelectedBackgroundColor] = useState("#FFFFFF");
   const [additionalInfo, setAdditionalInfo] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [generatedImage, setGeneratedImage] = useState("");
@@ -120,6 +103,11 @@ export default function Page() {
 
     setIsLoading(false);
   }
+
+  const isValidHexColor = (color: string): boolean => {
+    const hexColorRegex = /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/;
+    return hexColorRegex.test(color);
+  };
 
   return (
     <div className="flex h-screen flex-col overflow-y-auto overflow-x-hidden bg-[#343434] md:flex-row">
@@ -233,59 +221,77 @@ export default function Page() {
                   <div className="mb-[25px] flex flex-col md:flex-row md:space-x-3">
                     <div className="mb-4 flex-1 md:mb-0">
                       <label className="mb-1 block text-xs font-bold uppercase text-[#6F6F6F]">
-                        Primary
+                        Primary Color (Hex)
                       </label>
-                      <Select
-                        value={selectedPrimaryColor}
-                        onValueChange={setSelectedPrimaryColor}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a fruit" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectGroup>
-                            {primaryColors.map((color) => (
-                              <SelectItem key={color.color} value={color.name}>
-                                <span className="flex items-center">
-                                  <span
-                                    style={{ backgroundColor: color.color }}
-                                    className="mr-2 size-4 rounded-sm bg-white"
-                                  />
-                                  {color.name}
-                                </span>
-                              </SelectItem>
-                            ))}
-                          </SelectGroup>
-                        </SelectContent>
-                      </Select>
+                      <div className="flex gap-2">
+                        <Input
+                          value={selectedPrimaryColor}
+                          onChange={(e) => {
+                            const newColor = e.target.value;
+                            if (newColor.startsWith('#')) {
+                              setSelectedPrimaryColor(newColor);
+                            } else if (!newColor.startsWith('#') && newColor.length > 0) {
+                              setSelectedPrimaryColor(`#${newColor}`);
+                            } else {
+                              setSelectedPrimaryColor(newColor);
+                            }
+                          }}
+                          onBlur={(e) => {
+                            if (!isValidHexColor(selectedPrimaryColor)) {
+                              toast({
+                                variant: "destructive",
+                                title: "Invalid hex color",
+                                description: "Please enter a valid hex color (e.g., #FF0000)",
+                              });
+                              setSelectedPrimaryColor("#0F6FFF");
+                            }
+                          }}
+                          placeholder="#FF0000"
+                          maxLength={7}
+                          className={!isValidHexColor(selectedPrimaryColor) ? "border-red-500" : ""}
+                        />
+                        <div 
+                          className="size-10 rounded-md border"
+                          style={{ backgroundColor: isValidHexColor(selectedPrimaryColor) ? selectedPrimaryColor : '#0F6FFF' }}
+                        />
+                      </div>
                     </div>
                     <div className="flex-1">
-                      <label className="mb-1 block items-center text-xs font-bold uppercase text-[#6F6F6F]">
-                        Background
+                      <label className="mb-1 block text-xs font-bold uppercase text-[#6F6F6F]">
+                        Background Color (Hex)
                       </label>
-                      <Select
-                        value={selectedBackgroundColor}
-                        onValueChange={setSelectedBackgroundColor}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a fruit" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectGroup>
-                            {backgroundColors.map((color) => (
-                              <SelectItem key={color.color} value={color.name}>
-                                <span className="flex items-center">
-                                  <span
-                                    style={{ backgroundColor: color.color }}
-                                    className="mr-2 size-4 rounded-sm bg-white"
-                                  />
-                                  {color.name}
-                                </span>
-                              </SelectItem>
-                            ))}
-                          </SelectGroup>
-                        </SelectContent>
-                      </Select>
+                      <div className="flex gap-2">
+                        <Input
+                          value={selectedBackgroundColor}
+                          onChange={(e) => {
+                            const newColor = e.target.value;
+                            if (newColor.startsWith('#')) {
+                              setSelectedBackgroundColor(newColor);
+                            } else if (!newColor.startsWith('#') && newColor.length > 0) {
+                              setSelectedBackgroundColor(`#${newColor}`);
+                            } else {
+                              setSelectedBackgroundColor(newColor);
+                            }
+                          }}
+                          onBlur={(e) => {
+                            if (!isValidHexColor(selectedBackgroundColor)) {
+                              toast({
+                                variant: "destructive",
+                                title: "Invalid hex color",
+                                description: "Please enter a valid hex color (e.g., #FFFFFF)",
+                              });
+                              setSelectedBackgroundColor("#FFFFFF");
+                            }
+                          }}
+                          placeholder="#FFFFFF"
+                          maxLength={7}
+                          className={!isValidHexColor(selectedBackgroundColor) ? "border-red-500" : ""}
+                        />
+                        <div 
+                          className="size-10 rounded-md border"
+                          style={{ backgroundColor: isValidHexColor(selectedBackgroundColor) ? selectedBackgroundColor : '#FFFFFF' }}
+                        />
+                      </div>
                     </div>
                   </div>
                   {/* Additional Options Section */}
