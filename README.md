@@ -22,6 +22,35 @@
 2. Create a `.env` file and add your [Together AI API key](https://api.together.xyz/settings/api-keys): `TOGETHER_API_KEY=`
 3. Run `npm install` and `npm run dev` to install dependencies and run locally.
 
+## Docker Deployment
+
+You can also run this application using Docker:
+
+### Using Docker Compose (Recommended)
+
+1. Clone the repo and create your `.env` file with your Together AI API key
+2. Run: `docker-compose up -d`
+3. Access the app at `http://localhost:3000`
+
+### Using Docker directly
+
+```bash
+# Build the image
+docker build -t logocreator .
+
+# Run the container
+docker run -p 3000:3000 -e TOGETHER_API_KEY=your_api_key_here logocreator
+```
+
+### Using pre-built images
+
+Docker images are automatically built and pushed via GitHub Actions. You can pull and run them:
+
+```bash
+docker pull yourusername/logocreator:latest
+docker run -p 3000:3000 -e TOGETHER_API_KEY=your_api_key_here yourusername/logocreator:latest
+```
+
 ## Future Tasks
 
 - [ ] Create a dashboard with a user's logo history
