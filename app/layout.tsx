@@ -52,7 +52,6 @@ export default function RootLayout({
 
   // The main content wrapped in html/body
   const content = (
-  return (
       <html lang="en" className="h-full">
         <head>
           <PlausibleProvider domain="logo-creator.io" />
