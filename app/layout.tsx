@@ -45,8 +45,13 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  return (
-    <ClerkProvider>
+
+    // Check if Clerk is configured
+  const clerkPublishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
+  const hasClerk = !!clerkPublishableKey;
+
+  // The main content wrapped in html/body
+  const content = (
       <html lang="en" className="h-full">
         <head>
           <PlausibleProvider domain="logo-creator.io" />
@@ -60,6 +65,9 @@ export default function RootLayout({
           <Toaster />
         </body>
       </html>
-    </ClerkProvider>
-  );
+      );
+
+  // Return with or without ClerkProvider based on configuration
+  return hasClerk ? <ClerkProvider>{content}</ClerkProvider> : content;
 }
+          

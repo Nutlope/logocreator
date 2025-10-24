@@ -53,6 +53,13 @@ const backgroundColors = [
 ];
 
 export default function Page() {
+  // Check if Clerk is configured
+  const hasClerk = !!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
+  
+  // Conditionally use Clerk or provide fallback values
+  const clerkUser = hasClerk ? useUser() : { isSignedIn: true, isLoaded: true, user: null };
+  const { isSignedIn, isLoaded, user } = clerkUser;
+
   const [userAPIKey, setUserAPIKey] = useState(() => {
     if (typeof window !== "undefined") {
       return localStorage.getItem("userAPIKey") || "";
@@ -71,8 +78,6 @@ export default function Page() {
   const [additionalInfo, setAdditionalInfo] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [generatedImage, setGeneratedImage] = useState("");
-
-  const { isSignedIn, isLoaded, user } = useUser();
 
   const handleAPIKeyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
@@ -103,7 +108,9 @@ export default function Page() {
     if (res.ok) {
       const json = await res.json();
       setGeneratedImage(`data:image/png;base64,${json.b64_json}`);
-      await user.reload();
+      if (user) {
+        await user.reload();
+      }
     } else if (res.headers.get("Content-Type") === "text/plain") {
       toast({
         variant: "destructive",
@@ -333,7 +340,7 @@ export default function Page() {
             </fieldset>
           </form>
 
-          {isLoaded && !isSignedIn && (
+          {hasClerk && isLoaded && !isSignedIn && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -379,42 +386,4 @@ export default function Page() {
                     alt=""
                   />
                   <div
-                    className={`pointer-events-none absolute inset-0 transition ${isLoading ? "bg-black/50 duration-500" : "bg-black/0 duration-0"}`}
-                  />
-
-                  <div className="absolute -right-12 top-0 flex flex-col gap-2">
-                    <Button size="icon" variant="secondary" asChild>
-                      <a href={generatedImage} download="logo.png">
-                        <DownloadIcon />
-                      </a>
-                    </Button>
-                    <Button
-                      size="icon"
-                      onClick={generateLogo}
-                      variant="secondary"
-                    >
-                      <Spinner loading={isLoading}>
-                        <RefreshCwIcon />
-                      </Spinner>
-                    </Button>
-                  </div>
-                </>
-              ) : (
-                <Spinner loading={isLoading} className="size-8 text-white">
-                  <div className="flex aspect-square w-full flex-col items-center justify-center rounded-xl bg-[#2C2C2C]">
-                    <h4 className="text-center text-base leading-tight text-white">
-                      Generate your dream
-                      <br />
-                      logo in 10 seconds!
-                    </h4>
-                  </div>
-                </Spinner>
-              )}
-            </div>
-          </div>
-          <Footer />
-        </div>
-      </div>
-    </div>
-  );
-}
+                    className={
