@@ -20,7 +20,8 @@
 
 1. Clone the repo: `git clone https://github.com/Nutlope/logocreator`
 2. Create a `.env` file and add your [Together AI API key](https://api.together.xyz/settings/api-keys): `TOGETHER_API_KEY=`
-3. Run `npm install` and `npm run dev` to install dependencies and run locally.
+3. Set up [Clerk](https://clerk.com/) for authentication by creating an account and adding your publishable and secret keys to `.env`: `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=` and `CLERK_SECRET_KEY=`
+4. Run `npm install` and `npm run dev` to install dependencies and run locally.
 
 ## Future Tasks
 

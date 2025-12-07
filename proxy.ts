@@ -2,11 +2,8 @@ import { clerkMiddleware } from "@clerk/nextjs/server";
 import { NextResponse, NextFetchEvent } from "next/server";
 import type { NextRequest } from "next/server";
 
-export default async function middleware(
-  req: NextRequest,
-  evt: NextFetchEvent,
-) {
-  const country = req.geo?.country;
+export default async function proxy(req: NextRequest, evt: NextFetchEvent) {
+  const country = req.headers.get("x-vercel-ip-country");
   // Check for Russian traffic first as there's too much spam from Russia
   if (country === "RU") {
     return new NextResponse("Access Denied", { status: 403 });

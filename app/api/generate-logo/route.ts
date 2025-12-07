@@ -111,12 +111,11 @@ export async function POST(req: Request) {
   Primary color is ${data.selectedPrimaryColor.toLowerCase()} and background color is ${data.selectedBackgroundColor.toLowerCase()}. The company name is ${data.companyName}, make sure to include the company name in the logo. ${data.additionalInfo ? `Additional info: ${data.additionalInfo}` : ""}`;
 
   try {
-    const response = await client.images.create({
+    const response = await client.images.generate({
       prompt,
       model: "black-forest-labs/FLUX.1.1-pro",
       width: 768,
       height: 768,
-      // @ts-expect-error - this is not typed in the API
       response_format: "base64",
     });
     return Response.json(response.data[0], { status: 200 });
