@@ -1,9 +1,8 @@
 import type { Metadata } from "next";
 import { Jura } from "next/font/google";
 import "./globals.css";
-import { ClerkProvider } from "@clerk/nextjs";
-import { Toaster } from "@/app/components/ui/toaster";
-import PlausibleProvider from "next-plausible";
+import { ClientProviders } from "@/app/components/providers/ClientProviders";
+import { parseFeatureFlagEnvVar, DEFAULT_FLAGS } from "@/app/lib/feature-flags";
 
 const jura = Jura({
   subsets: ["latin"],
@@ -45,21 +44,28 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Parse feature flags from environment
+  const envFlags = parseFeatureFlagEnvVar();
+  const featureFlags = Object.fromEntries(
+    Object.entries(DEFAULT_FLAGS).map(([key, flag]) => [
+      key,
+      envFlags[key] ?? flag.enabled
+    ])
+  );
+
   return (
-    <ClerkProvider>
-      <html lang="en" className="h-full">
-        <head>
-          <PlausibleProvider domain="logo-creator.io" />
-          <link rel="icon" href="/favicon.ico" sizes="any" />
-          <meta name="color-scheme" content="dark" />
-        </head>
-        <body
-          className={`${jura.variable} dark min-h-full bg-[#343434] font-jura antialiased`}
-        >
+    <html lang="en" className="h-full">
+      <head>
+        <link rel="icon" href="/favicon.ico" sizes="any" />
+        <meta name="color-scheme" content="dark" />
+      </head>
+      <body
+        className={`${jura.variable} dark min-h-full bg-[#343434] font-jura antialiased`}
+      >
+        <ClientProviders featureFlags={featureFlags}>
           {children}
-          <Toaster />
-        </body>
-      </html>
-    </ClerkProvider>
+        </ClientProviders>
+      </body>
+    </html>
   );
 }

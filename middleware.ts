@@ -1,6 +1,7 @@
 import { clerkMiddleware } from "@clerk/nextjs/server";
 import { NextResponse, NextFetchEvent } from "next/server";
 import type { NextRequest } from "next/server";
+import { parseFeatureFlagEnvVar } from "@/app/lib/feature-flags";
 
 export default async function middleware(
   req: NextRequest,
@@ -12,8 +13,17 @@ export default async function middleware(
     return new NextResponse("Access Denied", { status: 403 });
   }
 
-  // If not from Russia, proceed with Clerk authentication
-  return clerkMiddleware()(req, evt);
+  // Check if AUTH feature flag is enabled
+  const featureFlags = parseFeatureFlagEnvVar();
+  const isAuthEnabled = featureFlags['AUTH'] ?? true; // Default to true for safety
+
+  // Only apply Clerk middleware if authentication is enabled
+  if (isAuthEnabled) {
+    return clerkMiddleware()(req, evt);
+  }
+
+  // If auth is disabled, allow the request to proceed
+  return NextResponse.next();
 }
 
 export const config = {

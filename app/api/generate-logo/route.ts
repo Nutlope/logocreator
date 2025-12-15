@@ -4,28 +4,60 @@ import { Redis } from "@upstash/redis";
 import dedent from "dedent";
 import Together from "together-ai";
 import { z } from "zod";
+import { DEFAULT_FLAGS, parseFeatureFlagEnvVar } from "@/app/lib/feature-flags";
+import { models } from "@/app/constants/models";
+
+// Helper function to sanitize input
+function sanitizeInput(text: string): string {
+  return text
+    .replace(/[^\w\s-]/g, '') // Remove special characters except spaces and hyphens
+    .trim();
+}
 
 let ratelimit: Ratelimit | undefined;
 
 export async function POST(req: Request) {
-  const user = await currentUser();
+  const featureFlags = { ...DEFAULT_FLAGS, ...parseFeatureFlagEnvVar() };
+  const authEnabled = featureFlags.AUTH.enabled;
 
-  if (!user) {
-    return new Response("", { status: 404 });
+  let user = null;
+  if (authEnabled) {
+    user = await currentUser();
+    if (!user) {
+      return new Response("", { status: 404 });
+    }
   }
 
   const json = await req.json();
   const data = z
     .object({
       userAPIKey: z.string().optional(),
-      companyName: z.string(),
-      // selectedLayout: z.string(),
+      companyName: z.string().transform(sanitizeInput),
       selectedStyle: z.string(),
+      selectedModel: z.string().default("black-forest-labs/FLUX.1.1-pro"),
       selectedPrimaryColor: z.string(),
       selectedBackgroundColor: z.string(),
-      additionalInfo: z.string().optional(),
+      additionalInfo: z.string().optional().transform(val => val ? sanitizeInput(val) : ''),
+      referenceImage: z.string().optional(),
     })
     .parse(json);
+
+  // Validate that the model exists in our allowed list
+  const selectedModel = models.find(m => m.modelString === data.selectedModel);
+  if (!selectedModel) {
+    return new Response("Invalid model selected", {
+      status: 400,
+      headers: { "Content-Type": "text/plain" },
+    });
+  }
+
+  // Validate reference image is provided when required
+  if (selectedModel.requiresReferenceImage && !data.referenceImage) {
+    return new Response("This model requires a reference image", {
+      status: 400,
+      headers: { "Content-Type": "text/plain" },
+    });
+  }
 
   // Add observability if a Helicone key is specified, otherwise skip
   const options: ConstructorParameters<typeof Together>[0] = {};
@@ -38,7 +70,7 @@ export async function POST(req: Request) {
   }
 
   // Add rate limiting if Upstash API keys are set & no BYOK, otherwise skip
-  if (process.env.UPSTASH_REDIS_REST_URL && !data.userAPIKey) {
+  if (process.env.UPSTASH_REDIS_REST_URL && !data.userAPIKey && authEnabled) {
     ratelimit = new Ratelimit({
       redis: Redis.fromEnv(),
       // Allow 3 requests per 2 months on prod
@@ -52,21 +84,25 @@ export async function POST(req: Request) {
 
   if (data.userAPIKey) {
     client.apiKey = data.userAPIKey;
-    (await clerkClient()).users.updateUserMetadata(user.id, {
-      unsafeMetadata: {
-        remaining: "BYOK",
-      },
-    });
+    if (authEnabled && user) {
+      (await clerkClient()).users.updateUserMetadata(user.id, {
+        unsafeMetadata: {
+          remaining: "BYOK",
+        },
+      });
+    }
   }
 
-  if (ratelimit) {
+  if (ratelimit && user) {
     const identifier = user.id;
     const { success, remaining } = await ratelimit.limit(identifier);
-    (await clerkClient()).users.updateUserMetadata(user.id, {
-      unsafeMetadata: {
-        remaining,
-      },
-    });
+    if (authEnabled) {
+      (await clerkClient()).users.updateUserMetadata(user.id, {
+        unsafeMetadata: {
+          remaining,
+        },
+      });
+    }
 
     if (!success) {
       return new Response(
@@ -80,22 +116,22 @@ export async function POST(req: Request) {
   }
 
   const flashyStyle =
-    "Flashy, attention grabbing, bold, futuristic, and eye-catching. Use vibrant neon colors with metallic, shiny, and glossy accents.";
+    "Professional and impactful corporate design with modern dynamic elements. Use bright professional colors with refined metallic accents and clean glossy finishes.";
 
   const techStyle =
-    "highly detailed, sharp focus, cinematic, photorealistic, Minimalist, clean, sleek, neutral color pallete with subtle accents, clean lines, shadows, and flat.";
+    "Professional tech-focused design with precise geometric elements. Clean, high-contrast layout with subtle depth effects and modern typography.";
 
   const modernStyle =
-    "modern, forward-thinking, flat design, geometric shapes, clean lines, natural colors with subtle accents, use strategic negative space to create visual interest.";
+    "Contemporary business design utilizing clean geometric shapes and professional layout. Emphasize whitespace and subtle gradients for a refined corporate look.";
 
   const playfulStyle =
-    "playful, lighthearted, bright bold colors, rounded shapes, lively.";
+    "Approachable business design with friendly geometric elements. Use professional color combinations and smooth curved shapes for an inviting corporate identity.";
 
   const abstractStyle =
-    "abstract, artistic, creative, unique shapes, patterns, and textures to create a visually interesting and wild logo.";
+    "Contemporary corporate design using refined geometric patterns. Professional composition with clean shapes and business-appropriate artistic elements.";
 
   const minimalStyle =
-    "minimal, simple, timeless, versatile, single color logo, use negative space, flat design with minimal details, Light, soft, and subtle.";
+    "Elegant corporate design focusing on simplicity and clarity. Single-color professional layout with strategic use of whitespace and refined typography.";
 
   const styleLookup: Record<string, string> = {
     Flashy: flashyStyle,
@@ -106,18 +142,30 @@ export async function POST(req: Request) {
     Minimal: minimalStyle,
   };
 
-  const prompt = dedent`A single logo, high-quality, award-winning professional design, made for both digital and print media, only contains a few vector shapes, ${styleLookup[data.selectedStyle]}
+  const getColorInstructions = (primaryColor: string, backgroundColor: string) => {
+    const isHex = (color: string) => color.startsWith('#');
+    const primaryIsHex = isHex(primaryColor);
+    const bgIsHex = isHex(backgroundColor);
 
-  Primary color is ${data.selectedPrimaryColor.toLowerCase()} and background color is ${data.selectedBackgroundColor.toLowerCase()}. The company name is ${data.companyName}, make sure to include the company name in the logo. ${data.additionalInfo ? `Additional info: ${data.additionalInfo}` : ""}`;
+    return `The logo must strictly use ${primaryIsHex ? `the exact color ${primaryColor}` : primaryColor.toLowerCase()} as the primary/dominant color for the main elements. ${bgIsHex ? `Use exactly ${backgroundColor}` : `Use ${backgroundColor.toLowerCase()}`} as the background color. Maintain strong contrast between the logo elements and background. If accent colors are needed, derive them from the primary color while maintaining color harmony. Ensure the colors are precisely as specified for consistent branding.`;
+  };
+
+  const prompt = dedent`Create a professional, clean, family-friendly business logo that is strictly safe for work and absolutely must not contain any adult, inappropriate, offensive, or NSFW content. Generate a single, high-quality, award-winning corporate design suitable for both digital and print media. The logo should only contain simple vector shapes and typography, ${styleLookup[data.selectedStyle]}
+
+  ${getColorInstructions(data.selectedPrimaryColor, data.selectedBackgroundColor)}
+  
+  The company name is ${data.companyName}, make sure to include the company name in the logo in a professional business font. Keep the design clean, corporate, and family-friendly. Ensure all elements are appropriate for a professional business context. ${data.additionalInfo ? `Additional design context: ${data.additionalInfo}` : ""}`;
 
   try {
     const response = await client.images.create({
       prompt,
-      model: "black-forest-labs/FLUX.1.1-pro",
+      model: data.selectedModel,
       width: 768,
       height: 768,
+      steps: selectedModel.defaultSteps,
       // @ts-expect-error - this is not typed in the API
       response_format: "base64",
+      image_url: data.referenceImage ? `data:image/png;base64,${data.referenceImage}` : undefined,
     });
     return Response.json(response.data[0], { status: 200 });
   } catch (error) {
@@ -149,6 +197,24 @@ export async function POST(req: Request) {
         "Your Together AI account needs to be in Build Tier 2 ($50 credit pack purchase required) to use this model. Please make a purchase at: https://api.together.xyz/settings/billing",
         {
           status: 403,
+          headers: { "Content-Type": "text/plain" },
+        },
+      );
+    }
+
+    const nsfwError = z
+      .object({
+        error: z.object({
+          error: z.object({ message: z.string(), type: z.string() }),
+        }),
+      })
+      .safeParse(error);
+
+    if (nsfwError.success && nsfwError.data.error.error.message.includes("NSFW content")) {
+      return new Response(
+        "Your prompt may contain sensitive content. Please modify your company name or additional information to be more business-appropriate and try again.",
+        {
+          status: 422,
           headers: { "Content-Type": "text/plain" },
         },
       );
