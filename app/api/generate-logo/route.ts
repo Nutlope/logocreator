@@ -4,6 +4,7 @@ import { Redis } from "@upstash/redis";
 import dedent from "dedent";
 import Together from "together-ai";
 import { z } from "zod";
+import { generateAtlasCloudLogo } from "./atlascloud";
 
 let ratelimit: Ratelimit | undefined;
 
@@ -38,16 +39,8 @@ export async function POST(req: Request) {
     });
   }
 
-  const client = new Together();
-
-  if (data.userAPIKey) {
-    client.apiKey = data.userAPIKey;
-    (await clerkClient()).users.updateUserMetadata(user.id, {
-      unsafeMetadata: {
-        remaining: "BYOK",
-      },
-    });
-  }
+  const imageProvider = process.env.IMAGE_PROVIDER ?? "together";
+  const isAtlasCloudProvider = imageProvider === "atlascloud";
 
   if (ratelimit) {
     const identifier = user.id;
@@ -59,12 +52,11 @@ export async function POST(req: Request) {
     });
 
     if (!success) {
+      const providerName = isAtlasCloudProvider ? "Atlas Cloud" : "Together";
+
       return new Response(
-        "You've used up all your credits. Enter your own Together API Key to generate more logos.",
-        {
-          status: 429,
-          headers: { "Content-Type": "text/plain" },
-        },
+        `You've used up all your credits. Enter your own ${providerName} API key to generate more logos.`,
+        { status: 429, headers: { "Content-Type": "text/plain" } },
       );
     }
   }
@@ -101,6 +93,40 @@ export async function POST(req: Request) {
   Primary color is ${data.selectedPrimaryColor.toLowerCase()} and background color is ${data.selectedBackgroundColor.toLowerCase()}. The company name is ${data.companyName}, make sure to include the company name in the logo. ${data.additionalInfo ? `Additional info: ${data.additionalInfo}` : ""}`;
 
   try {
+    if (isAtlasCloudProvider) {
+      const atlasApiKey = data.userAPIKey || process.env.ATLASCLOUD_API_KEY;
+
+      if (!atlasApiKey) {
+        return new Response("Atlas Cloud API key is required.", {
+          status: 401,
+          headers: { "Content-Type": "text/plain" },
+        });
+      }
+
+      if (data.userAPIKey) {
+        (await clerkClient()).users.updateUserMetadata(user.id, {
+          unsafeMetadata: {
+            remaining: "BYOK",
+          },
+        });
+      }
+
+      return Response.json(await generateAtlasCloudLogo(prompt, atlasApiKey), {
+        status: 200,
+      });
+    }
+
+    const client = new Together();
+
+    if (data.userAPIKey) {
+      client.apiKey = data.userAPIKey;
+      (await clerkClient()).users.updateUserMetadata(user.id, {
+        unsafeMetadata: {
+          remaining: "BYOK",
+        },
+      });
+    }
+
     const response = await client.images.create({
       prompt,
       model: "black-forest-labs/FLUX.1.1-pro",

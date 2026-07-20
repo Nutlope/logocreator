@@ -102,7 +102,9 @@ export default function Page() {
 
     if (res.ok) {
       const json = await res.json();
-      setGeneratedImage(`data:image/png;base64,${json.b64_json}`);
+      setGeneratedImage(
+        json.url ? json.url : `data:image/png;base64,${json.b64_json}`,
+      );
       await user.reload();
     } else if (res.headers.get("Content-Type") === "text/plain") {
       toast({
@@ -144,7 +146,7 @@ export default function Page() {
                       htmlFor="api-key"
                       className="mb-2 block text-xs font-bold uppercase text-[#F3F3F3]"
                     >
-                      TOGETHER API KEY
+                      PROVIDER API KEY
                       <span className="ml-2 text-xs uppercase text-[#6F6F6F]">
                         [OPTIONAL]
                       </span>

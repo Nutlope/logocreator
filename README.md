@@ -20,6 +20,7 @@
 
 1. Clone the repo: `git clone https://github.com/Nutlope/logocreator`
 2. Create a `.env` file and add your [Together AI API key](https://api.together.xyz/settings/api-keys): `TOGETHER_API_KEY=`
+   - To use Atlas Cloud's image API instead, set `IMAGE_PROVIDER=atlascloud` and add `ATLASCLOUD_API_KEY=` from the [Atlas Cloud console](https://www.atlascloud.ai/console/api-keys?utm_source=github&utm_medium=pr&utm_campaign=logocreator).
 3. Run `npm install` and `npm run dev` to install dependencies and run locally.
 
 ## Future Tasks
