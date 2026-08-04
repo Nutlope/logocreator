@@ -6,6 +6,7 @@ import dedent from "dedent";
 import Together from "together-ai";
 import { z } from "zod";
 import { FREE_CREDITS, creditsKey } from "@/app/lib/credits";
+import { generateAtlasCloudLogo } from "./atlascloud";
 
 // Nearest human color name for a hex: the model honors "blue (#2F6FF5)" far
 // more reliably than a bare hex, and this also covers custom-picked colors.
@@ -79,11 +80,12 @@ export async function POST(req: Request) {
     });
   }
   const data = parsed.data;
+  const userAPIKey = data.userAPIKey?.trim();
 
   // With Clerk configured, the free (server-key) credits sit behind sign-in:
   // that friction keeps an anonymous loop from draining a paid image model.
   // Bringing your own key still works signed out; you spend your own money.
-  if (clerkEnabled && !user && !data.userAPIKey) {
+  if (clerkEnabled && !user && !userAPIKey) {
     return new Response(
       "Sign in to use your free credits, or add your own Together AI key.",
       { status: 401, headers: { "Content-Type": "text/plain" } },
@@ -97,7 +99,7 @@ export async function POST(req: Request) {
   const hasLimiter = !!process.env.UPSTASH_REDIS_REST_URL;
   if (
     process.env.NODE_ENV === "production" &&
-    !data.userAPIKey &&
+    !userAPIKey &&
     !clerkEnabled &&
     !hasLimiter
   ) {
@@ -107,18 +109,27 @@ export async function POST(req: Request) {
     );
   }
 
-  // Use the caller's own key when supplied, else the server key. Passing it in
-  // the constructor (rather than mutating client.apiKey) is read per request.
-  const options: ConstructorParameters<typeof Together>[0] = {
-    apiKey: data.userAPIKey || process.env.TOGETHER_API_KEY,
-  };
-  if (!options.apiKey) {
-    return new Response("No API key available.", {
-      status: 401,
-      headers: { "Content-Type": "text/plain" },
-    });
+  const imageProvider = process.env.IMAGE_PROVIDER?.toLowerCase() ?? "together";
+  // A browser-provided key is a Together key throughout the v2 app (editing,
+  // reference reading and brand kits use it too), so BYOK requests stay on
+  // Together even when server-backed generation is routed through Atlas Cloud.
+  const useAtlasCloud = imageProvider === "atlascloud" && !userAPIKey;
+  const apiKey =
+    userAPIKey ||
+    (useAtlasCloud
+      ? process.env.ATLASCLOUD_API_KEY?.trim()
+      : process.env.TOGETHER_API_KEY?.trim());
+  if (!apiKey) {
+    return new Response(
+      useAtlasCloud
+        ? "Atlas Cloud is not configured on this deployment."
+        : "No API key available.",
+      {
+        status: useAtlasCloud ? 503 : 401,
+        headers: { "Content-Type": "text/plain" },
+      },
+    );
   }
-  const client = new Together(options);
 
   // ── Free-credit ledger (Upstash) ────────────────────────────────────────
   // A signed-in user gets a durable allotment of FREE_CREDITS images, spent
@@ -128,7 +139,7 @@ export async function POST(req: Request) {
   // (forgiving on purpose: office NATs share an IP).
   let remaining: number | undefined;
   let refundCredit: (() => Promise<void>) | undefined;
-  if (hasLimiter && !data.userAPIKey) {
+  if (hasLimiter && !userAPIKey) {
     const redis = Redis.fromEnv();
     if (user) {
       const key = creditsKey(user.id);
@@ -293,6 +304,15 @@ export async function POST(req: Request) {
         .type === "request_blocked");
 
   try {
+    if (useAtlasCloud) {
+      const response = await generateAtlasCloudLogo(prompt, apiKey);
+      return Response.json(
+        { ...response, ...(remaining !== undefined ? { remaining } : {}) },
+        { status: 200 },
+      );
+    }
+
+    const client = new Together({ apiKey });
     // Text-bearing types (wordmark / monogram / emblem / icon-name) embed the
     // company name letter-for-letter; Gemini Flash Image renders lettering
     // reliably AND follows structural instructions (e.g. "monogram") better
