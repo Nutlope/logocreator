@@ -2,59 +2,66 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+  LogoCreator design system: warm off-white / off-black, one quiet ink-blue accent.
+  Token names mirror shadcn so all primitives keep working; only the values change.
+  Light is the default; .dark holds the dark theme.
+*/
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 0 0% 3.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 0 0% 3.9%;
+    --background: 48 33% 98%; /* warm off-white paper */
+    --foreground: 40 8% 9%; /* warm off-black ink */
+
+    --card: 0 0% 100%; /* crisp white surfaces (the canvas + input card) */
+    --card-foreground: 40 8% 9%;
     --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 3.9%;
-    --primary: 0 0% 9%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 0 0% 96.1%;
-    --secondary-foreground: 0 0% 9%;
-    --muted: 0 0% 96.1%;
-    --muted-foreground: 0 0% 45.1%;
-    --accent: 0 0% 96.1%;
-    --accent-foreground: 0 0% 9%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 89.8%;
-    --input: 0 0% 89.8%;
-    --ring: 0 0% 3.9%;
-    --chart-1: 12 76% 61%;
-    --chart-2: 173 58% 39%;
-    --chart-3: 197 37% 24%;
-    --chart-4: 43 74% 66%;
-    --chart-5: 27 87% 67%;
-    --radius: 0.5rem;
+    --popover-foreground: 40 8% 9%;
+
+    --primary: 231 45% 51%; /* the one quiet accent: refined ink-blue */
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 45 22% 95%; /* warm light neutral */
+    --secondary-foreground: 40 8% 12%;
+    --muted: 45 22% 95%;
+    --muted-foreground: 40 4% 42%;
+    --accent: 45 24% 94%;
+    --accent-foreground: 40 8% 12%;
+
+    --destructive: 8 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 44 16% 90%; /* warm hairline */
+    --input: 44 16% 89%;
+    --ring: 231 45% 51%; /* focus = accent */
+
+    --radius: 0.75rem;
   }
+
   .dark {
-    --background: 0 0% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 0 0% 3.9%;
-    --card-foreground: 0 0% 98%;
-    --popover: 0 0% 3.9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 0 0% 98%;
-    --primary-foreground: 0 0% 9%;
-    --secondary: 0 0% 14.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 0 0% 14.9%;
-    --muted-foreground: 0 0% 63.9%;
-    --accent: 0 0% 14.9%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 20.39%;
-    --input: 0 0% 20.39%;
-    --ring: 0 0% 83.1%;
-    --chart-1: 220 70% 50%;
-    --chart-2: 160 60% 45%;
-    --chart-3: 30 80% 55%;
-    --chart-4: 280 65% 60%;
-    --chart-5: 340 75% 55%;
+    --background: 40 7% 5%; /* warm off-black */
+    --foreground: 45 22% 95%; /* warm off-white */
+
+    --card: 40 5% 8%;
+    --card-foreground: 45 22% 95%;
+    --popover: 40 5% 8%;
+    --popover-foreground: 45 22% 95%;
+
+    --primary: 230 66% 67%; /* a touch brighter ink-blue on dark */
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 40 4% 13%;
+    --secondary-foreground: 45 22% 95%;
+    --muted: 40 4% 13%;
+    --muted-foreground: 45 6% 60%;
+    --accent: 40 4% 15%;
+    --accent-foreground: 45 22% 95%;
+
+    --destructive: 8 64% 52%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 40 5% 15%;
+    --input: 40 5% 16%;
+    --ring: 230 66% 67%;
   }
 }
 
@@ -62,7 +69,265 @@
   * {
     @apply border-border;
   }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "ss01", "cv01", "cv02";
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Selection picks up the accent, quietly */
+  ::selection {
+    background-color: hsl(var(--primary) / 0.16);
+  }
+
+  /* Buttons are controls, not content: dragging or double-tapping one should
+     never start a text selection (Chrome allows it; Safari/Firefox already
+     don't). Covers pills, chips, tiles, segmented controls and menu items.
+     Real content (descriptions, hex codes, inputs) stays selectable. */
+  button {
+    @apply select-none;
+  }
+}
+
+@layer utilities {
+  /* Tiny uppercase field labels: warm geometric reads beautifully in caps.
+     UI chrome, not content, so they don't take part in text selection. */
+  .label-eyebrow {
+    @apply select-none text-[0.6875rem] font-medium uppercase tracking-[0.04em] text-muted-foreground;
+  }
+
+  /* Soft conic spinner used while generating */
+  .spinner-ring {
+    background: conic-gradient(
+      from 0deg,
+      transparent 0%,
+      hsl(var(--primary)) 92%,
+      hsl(var(--primary)) 100%
+    );
+    -webkit-mask: radial-gradient(
+      farthest-side,
+      transparent calc(100% - 2px),
+      #000 calc(100% - 2px)
+    );
+    mask: radial-gradient(
+      farthest-side,
+      transparent calc(100% - 2px),
+      #000 calc(100% - 2px)
+    );
+    animation: spinner-spin 0.7s linear infinite;
+  }
+
+  @keyframes spinner-spin {
+    to {
+      transform: rotate(1turn);
+    }
+  }
+
+  /* Gentle shimmer for the empty/loading canvas */
+  @keyframes pulse-soft {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.55;
+    }
+  }
+  .animate-pulse-soft {
+    animation: pulse-soft 1.8s ease-in-out infinite;
+  }
+
+  /* Sweeping shimmer for skeleton/loading cells */
+  @keyframes shimmer {
+    100% {
+      transform: translateX(100%);
+    }
+  }
+  .shimmer::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(
+      90deg,
+      transparent,
+      hsl(var(--foreground) / 0.07),
+      transparent
+    );
+    animation: shimmer 1.6s ease-in-out infinite;
+  }
+
+  /* Indeterminate accent sweep, rides on top of the brand-kit progress fill
+     while assets are still rendering, so the bar always feels alive. */
+  @keyframes indeterminate {
+    0% {
+      transform: translateX(-110%);
+    }
+    100% {
+      transform: translateX(380%);
+    }
+  }
+  .indeterminate-bar::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    width: 26%;
+    border-radius: inherit;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      hsl(var(--primary) / 0.6),
+      transparent
+    );
+    animation: indeterminate 1.5s ease-in-out infinite;
+  }
+
+  /* Soft breathing glow for asset tiles that are mid-render. */
+  @keyframes tile-breathe {
+    0%,
+    100% {
+      opacity: 0.5;
+    }
+    50% {
+      opacity: 0.9;
+    }
+  }
+  .animate-tile-breathe {
+    animation: tile-breathe 1.8s ease-in-out infinite;
+  }
+
+  /* Looping marquee rows for the welcome showcase. Each track holds its tiles
+     twice, so translating by -50% loops seamlessly. */
+  @keyframes marquee-left {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(-50%);
+    }
+  }
+  @keyframes marquee-right {
+    from {
+      transform: translateX(-50%);
+    }
+    to {
+      transform: translateX(0);
+    }
+  }
+  /* Horizontal chip scrollers hide their scrollbar, so fade the right edge as
+     the cue that more chips live off-screen (the trailing padding keeps the
+     last chip clear of the fade once scrolled to the end). */
+  .scroll-fade-x {
+    mask-image: linear-gradient(
+      to right,
+      black 0,
+      black calc(100% - 1.5rem),
+      transparent 100%
+    );
+    -webkit-mask-image: linear-gradient(
+      to right,
+      black 0,
+      black calc(100% - 1.5rem),
+      transparent 100%
+    );
+  }
+
+  .marquee-track {
+    width: max-content;
+    will-change: transform;
+  }
+  .marquee-left {
+    animation: marquee-left var(--marquee-dur, 44s) linear infinite;
+  }
+  .marquee-right {
+    animation: marquee-right var(--marquee-dur, 44s) linear infinite;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .marquee-left,
+    .marquee-right {
+      animation: none;
+    }
+  }
+}
+
+/*
+  App shell. Mobile reflows to: header, controls, gallery, footer (controls
+  first so the form isn't buried under an often-empty gallery). Desktop is the
+  panel-left / gallery-right two-pane.
+*/
+.app-shell {
+  display: grid;
+  /* minmax(0, 1fr), not 1fr (= minmax(auto,1fr)): `auto` is min-content, which
+     lets the aspect-square gallery grid force the whole page wider than a phone
+     (1264px @ 375px). minmax(0,...) + min-width:0 on the areas lets it shrink. */
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto auto minmax(13rem, 1fr) auto;
+  grid-template-areas:
+    "header"
+    "controls"
+    "gallery"
+    "footer";
+}
+.area-header {
+  grid-area: header;
+  min-width: 0;
+}
+.area-gallery {
+  grid-area: gallery;
+  min-width: 0;
+}
+.area-controls {
+  grid-area: controls;
+  min-width: 0;
+}
+.area-footer {
+  grid-area: footer;
+  min-width: 0;
+}
+
+@media (min-width: 768px) {
+  .app-shell {
+    grid-template-columns: 21rem minmax(0, 1fr);
+    grid-template-rows: auto 1fr auto;
+    /* Footer lives at the bottom of the generation column now, so the
+       controls sidebar stretches the full height for more breathing room. */
+    grid-template-areas:
+      "header gallery"
+      "controls gallery"
+      "controls footer";
+  }
+}
+@media (min-width: 1024px) {
+  .app-shell {
+    grid-template-columns: 23.5rem minmax(0, 1fr);
+  }
+}
+
+/*
+  Accessibility: honor the OS "reduce motion" setting. Near-instant durations
+  (not 0) so JS that waits on transition/animation end still fires. Covers CSS
+  spinners, shimmer, breathing dots, marquee, and all transitions.
+*/
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+  /* Exception: keep loading spinners actually spinning. A frozen spinner reads
+     as "stuck" during a long generation, and a steady rotation is not a
+     vestibular trigger the way parallax / zoom / slide motion is. */
+  .spinner-ring,
+  .animate-spin {
+    animation-duration: 0.8s !important;
+    animation-iteration-count: infinite !important;
   }
 }

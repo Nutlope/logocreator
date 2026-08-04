@@ -16,7 +16,9 @@ const ToastViewport = React.forwardRef<
   <ToastPrimitives.Viewport
     ref={ref}
     className={cn(
-      "fixed top-0 z-[100] flex max-h-screen w-full flex-col-reverse p-4 sm:right-0 sm:flex-col md:max-w-[420px]",
+      // Bottom on small screens (a top toast covered the header controls);
+      // top-right column on larger viewports as before.
+      "fixed bottom-0 z-[100] flex max-h-screen w-full flex-col-reverse p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:bottom-auto sm:right-0 sm:top-0 sm:flex-col sm:pb-4 md:max-w-[420px]",
       className,
     )}
     {...props}
@@ -77,7 +79,9 @@ const ToastClose = React.forwardRef<
   <ToastPrimitives.Close
     ref={ref}
     className={cn(
-      "absolute right-1 top-1 rounded-md p-1 text-foreground/50 opacity-0 transition-opacity hover:text-foreground focus:opacity-100 focus:outline-none focus:ring-1 group-hover:opacity-100 group-[.destructive]:text-red-300 group-[.destructive]:hover:text-red-50 group-[.destructive]:focus:ring-red-400 group-[.destructive]:focus:ring-offset-red-600",
+      // Visible by default (faint), brighter on hover: a low-vision mouse user
+      // could never find an invisible dismiss control.
+      "absolute right-1 top-1 rounded-md p-1 text-foreground/50 opacity-60 transition-opacity hover:text-foreground hover:opacity-100 focus:opacity-100 focus:outline-none focus:ring-1 group-hover:opacity-100 group-[.destructive]:text-red-300 group-[.destructive]:hover:text-red-50 group-[.destructive]:focus:ring-red-400 group-[.destructive]:focus:ring-offset-red-600",
       className,
     )}
     toast-close=""

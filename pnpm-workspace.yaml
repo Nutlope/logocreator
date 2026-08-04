@@ -2,7 +2,9 @@ packages:
   - "."
 onlyBuiltDependencies:
   - "@clerk/shared"
-  - "lzo"
+  - "sharp"
 allowBuilds:
   "@clerk/shared": true
-  "lzo": true
+  core-js: false
+  "sharp": true
+  unrs-resolver: false

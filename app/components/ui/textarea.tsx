@@ -9,7 +9,9 @@ const Textarea = React.forwardRef<
   return (
     <textarea
       className={cn(
-        "flex min-h-[60px] w-full rounded-md border border-input bg-[#343434] px-3 py-2 text-base shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm",
+        // 16px on phones (text-base) so iOS Safari doesn't auto-zoom on focus;
+        // back to the tighter 15px from sm+ where zoom isn't a concern.
+        "flex min-h-[76px] w-full resize-none rounded-lg border border-input bg-background px-3.5 py-2.5 text-base transition-colors placeholder:text-muted-foreground/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 sm:text-[0.9375rem]",
         className,
       )}
       ref={ref}
